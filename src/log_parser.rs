@@ -138,7 +138,7 @@ impl LogField {
         ]
     }
 
-    pub fn log_format_common_with_vhost() -> Vec<LogField> {
+    pub fn log_format_vhost_common() -> Vec<LogField> {
         let mut log_format = vec![LogField {
             name: String::from("vhost"),
             element_type: ParserElement::Word,
