@@ -3,8 +3,8 @@ use structopt::StructOpt;
 
 mod log_parser;
 
-/// This program reads Apache log data from standard input, processes it, and
-/// writes it to standard output.
+/// Alf, short for "Apache Log Format", reads Apache log data from standard
+/// input, processes it, and writes it to standard output.
 #[derive(StructOpt)]
 struct Opt {
     /// The character to insert between each output field. [default: tab]

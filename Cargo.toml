@@ -1,6 +1,6 @@
 [package]
-name = "apache-log-parser"
-version = "0.1.0"
+name = "alf"
+version = "1.0.0"
 authors = ["Toon Spin <toon.spin@gmail.com>"]
 edition = "2018"
 
