@@ -8,6 +8,7 @@ edition = "2018"
 
 [dependencies]
 memchr = "2"
+structopt = "0.3"
 
 [profile.release]
 debug = true
