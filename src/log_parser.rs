@@ -15,7 +15,7 @@ impl ParserElement {
                 return Ok((&input[..next_pos], next_pos));
             }
             None => {
-                return Err(UnexpectedEndOfLine);
+                return Ok((&input[..], input.len()));
             }
         }
     }
@@ -218,6 +218,10 @@ impl<'a, 'b> LineParser<'a> {
         for (id, field) in self.log_format.iter().enumerate() {
             if id > self.max_field_id {
                 break;
+            }
+
+            if pos >= input.as_bytes().len() {
+                return Err(UnexpectedEndOfLine);
             }
 
             let (field_match, consumed) = field.element_type.parse(&input[pos..])?;
