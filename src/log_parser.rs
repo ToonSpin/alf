@@ -7,6 +7,59 @@ pub enum ParserElement {
 }
 use ParserElement::*;
 
+impl ParserElement {
+    fn parse_word<'a>(&self, input: &'a str) -> Result<(&'a str, usize), ParserError> {
+        match memchr(b' ', &input[..].as_bytes()) {
+            Some(next_pos) => {
+                let next_pos = next_pos;
+                return Ok((&input[..next_pos], next_pos));
+            },
+            None => {
+                return Err(UnexpectedEndOfLine);
+            }
+        }
+    }
+
+    fn parse_bracket_delimited<'a>(&self, input: &'a str) -> Result<(&'a str, usize), ParserError> {
+        if input.as_bytes()[0] != b'[' {
+            return Err(UnexpectedCharacter('[', input.as_bytes()[0] as char, 0));
+        }
+
+        match memchr(b']', &input[..].as_bytes()) {
+            Some(next_pos) => {
+                return Ok((&input[1..next_pos], next_pos + 1))
+            },
+            None => {
+                return Err(UnexpectedEndOfLine);
+            }
+        }
+    }
+
+    fn parse_quote_delimited<'a>(&self, input: &'a str) -> Result<(&'a str, usize), ParserError> {
+        if input.as_bytes()[0] != b'"' {
+            return Err(UnexpectedCharacter('"', input.as_bytes()[0] as char, 0));
+        }
+
+        match memchr(b'"', &input[1..].as_bytes()) {
+            Some(next_pos) => {
+                let next_pos = next_pos + 1;
+                return Ok((&input[1..next_pos], next_pos + 1));
+            },
+            None => {
+                return Err(UnexpectedEndOfLine);
+            }
+        }
+    }
+
+    fn parse<'a>(&self, input: &'a str) -> Result<(&'a str, usize), ParserError> {
+        match self {
+            Word => self.parse_word(input),
+            BracketDelimited => self.parse_bracket_delimited(input),
+            QuoteDelimited => self.parse_quote_delimited(input),
+        }
+    }
+}
+
 pub enum ParserError {
     UnexpectedCharacter(char, char, usize),
     UnexpectedEndOfLine,
@@ -103,55 +156,13 @@ impl<'a, 'b> LineParser<'a> {
                 break;
             }
 
-            match field.element_type {
-                Word => {
-                    match memchr(b' ', &input[pos..].as_bytes()) {
-                        Some(next_pos) => {
-                            let next_pos = next_pos + pos;
-                            result.push(&input[pos..next_pos]);
-                            pos = next_pos + 1;
-                        },
-                        None => {
-                            return Err(UnexpectedEndOfLine);
-                        }
-                    }
-                },
-                BracketDelimited => {
-                    if input.as_bytes()[pos] != b'[' {
-                        return Err(UnexpectedCharacter('[', input.as_bytes()[pos] as char, pos));
-                    }
-                    pos += 1;
-                    match memchr(b']', &input[pos..].as_bytes()) {
-                        Some(next_pos) => {
-                            let next_pos = next_pos + pos;
-                            result.push(&input[pos..next_pos]);
-                            if input.as_bytes()[next_pos + 1] != b' ' {
-                                return Err(UnexpectedCharacter(' ', input.as_bytes()[next_pos + 1] as char, next_pos + 1));
-                            }
-                            pos = next_pos + 2;
-                        },
-                        None => {
-                            return Err(UnexpectedEndOfLine);
-                        }
-                    }
-                },
-                QuoteDelimited => {
-                    if input.as_bytes()[pos] != b'"' {
-                        return Err(UnexpectedCharacter('"', input.as_bytes()[pos] as char, pos));
-                    }
-                    pos += 1;
-                    match memchr(b'"', &input[pos..].as_bytes()) {
-                        Some(next_pos) => {
-                            let next_pos = next_pos + pos;
-                            result.push(&input[pos..next_pos]);
-                            pos = next_pos + 2;
-                        },
-                        None => {
-                            return Err(UnexpectedEndOfLine);
-                        }
-                    }
-                },
+            let (field_match, consumed) = field.element_type.parse(&input[pos..])?;
+            result.push(field_match);
+            pos += consumed;
+            if input.as_bytes().len() > pos && input.as_bytes()[pos] != b' ' {
+                return Err(UnexpectedCharacter(' ', input.as_bytes()[pos] as char, pos));
             }
+            pos += 1;
         }
         Ok(result)
     }
