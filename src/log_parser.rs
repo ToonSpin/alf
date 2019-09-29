@@ -13,7 +13,7 @@ impl ParserElement {
             Some(next_pos) => {
                 let next_pos = next_pos;
                 return Ok((&input[..next_pos], next_pos));
-            },
+            }
             None => {
                 return Err(UnexpectedEndOfLine);
             }
@@ -26,9 +26,7 @@ impl ParserElement {
         }
 
         match memchr(b']', &input[..].as_bytes()) {
-            Some(next_pos) => {
-                return Ok((&input[1..next_pos], next_pos + 1))
-            },
+            Some(next_pos) => return Ok((&input[1..next_pos], next_pos + 1)),
             None => {
                 return Err(UnexpectedEndOfLine);
             }
@@ -47,7 +45,12 @@ impl ParserElement {
         return Err(UnexpectedEndOfLine);
     }
 
-    fn parse_quote_delimited<'a>(&self, input: &'a str, left: bool, right: bool) -> Result<(&'a str, usize), ParserError> {
+    fn parse_quote_delimited<'a>(
+        &self,
+        input: &'a str,
+        left: bool,
+        right: bool,
+    ) -> Result<(&'a str, usize), ParserError> {
         let mut cur_pos = 0;
         if left {
             if input.as_bytes()[0] != b'"' {
@@ -90,7 +93,7 @@ use ParserError::*;
 
 pub struct LogField {
     name: String,
-    element_type: ParserElement
+    element_type: ParserElement,
 }
 
 impl LogField {
@@ -136,12 +139,10 @@ impl LogField {
     }
 
     pub fn log_format_common_with_vhost() -> Vec<LogField> {
-        let mut log_format = vec![
-            LogField {
-                name: String::from("vhost"),
-                element_type: ParserElement::Word,
-            },
-        ];
+        let mut log_format = vec![LogField {
+            name: String::from("vhost"),
+            element_type: ParserElement::Word,
+        }];
         log_format.append(&mut Self::log_format_common());
         log_format
     }
@@ -165,7 +166,7 @@ impl LogField {
 pub struct LineParser<'a> {
     log_format: &'a Vec<LogField>,
     field_ids: Option<Vec<usize>>,
-    max_field_id: usize
+    max_field_id: usize,
 }
 
 impl<'a, 'b> LineParser<'a> {
@@ -191,7 +192,7 @@ impl<'a, 'b> LineParser<'a> {
         LineParser {
             log_format,
             field_ids,
-            max_field_id
+            max_field_id,
         }
     }
 
@@ -224,7 +225,7 @@ impl<'a, 'b> LineParser<'a> {
                     selected_result.push(result[*i]);
                 }
                 Ok(selected_result)
-            },
+            }
             None => Ok(result),
         }
     }

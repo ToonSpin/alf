@@ -1,22 +1,18 @@
-mod log_parser;
-
-use std::io::Write;
-
-use std::io::BufRead;
-use std::io::BufWriter;
-
+use std::io::{BufRead, BufWriter, Write};
 use structopt::StructOpt;
+
+mod log_parser;
 
 /// This program reads Apache log data from standard input, processes it, and
 /// writes it to standard output.
 #[derive(StructOpt)]
 struct Opt {
     /// The character to insert between each output field. [default: tab]
-    #[structopt(value_name="char", short="d", long="delimiter")]
+    #[structopt(value_name = "char", short = "d", long = "delimiter")]
     field_delimiter: Option<char>,
 
     /// A whitespace delimited list of fields to extract from each line.
-    #[structopt(value_name="field", short, long)]
+    #[structopt(value_name = "field", short, long)]
     fields: Option<Vec<String>>,
 
     /// The log format this program should expect.
@@ -28,17 +24,17 @@ struct Opt {
     color: String,
 }
 
-fn write_output<T: Write>(writer: &mut T, result: Vec<&str>, delimiter: char) -> std::io::Result<()> {
+fn write_line<T: Write>(writer: &mut T, result: Vec<&str>, sep: char) -> std::io::Result<()> {
     writer.write(result[0].as_bytes())?;
     for i in 1..result.len() {
-        writer.write(&[delimiter as u8])?;
+        writer.write(&[sep as u8])?;
         writer.write(result[i].as_bytes())?;
     }
     writer.write(&[b'\n'])?;
     Ok(())
 }
 
-fn write_output_color<T: Write>(writer: &mut T, result: Vec<&str>, delimiter: char) -> std::io::Result<()> {
+fn write_line_color<T: Write>(writer: &mut T, result: Vec<&str>, sep: char) -> std::io::Result<()> {
     let colors = vec![
         "\u{001b}[31m", // red
         "\u{001b}[32m", // green
@@ -52,12 +48,15 @@ fn write_output_color<T: Write>(writer: &mut T, result: Vec<&str>, delimiter: ch
     writer.write(colors[0].as_bytes())?;
     writer.write(result[0].as_bytes())?;
     writer.write(reset.as_bytes())?;
+
     for i in 1..result.len() {
-        writer.write(&[delimiter as u8])?;
+        writer.write(&[sep as u8])?;
+
         writer.write(colors[i % colors.len()].as_bytes())?;
         writer.write(result[i].as_bytes())?;
         writer.write(reset.as_bytes())?;
     }
+
     writer.write(&[b'\n'])?;
     Ok(())
 }
@@ -90,9 +89,9 @@ fn main() -> std::io::Result<()> {
         if let Ok(v) = parser.parse_line(&line) {
             if v.len() > 0 {
                 if use_color {
-                    write_output_color(&mut stdout, v, delimiter)?;
+                    write_line_color(&mut stdout, v, delimiter)?;
                 } else {
-                    write_output(&mut stdout, v, delimiter)?;
+                    write_line(&mut stdout, v, delimiter)?;
                 }
             }
         }
