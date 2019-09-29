@@ -14,6 +14,10 @@ struct Opt {
     /// A character to insert between each output field. [default: tab]
     #[structopt(value_name="CHAR", short="d", long="delimiter")]
     field_delimiter: Option<char>,
+
+    /// A whitespace delimited list of fields to extract from each line.
+    #[structopt(value_name="FIELD", short, long)]
+    fields: Option<Vec<String>>,
 }
 
 
@@ -23,20 +27,8 @@ fn main() -> std::io::Result<()> {
 
     let opt = Opt::from_args();
 
-
-    let format_combined = vec![
-        log_parser::ParserElement::Word,
-        log_parser::ParserElement::Word,
-        log_parser::ParserElement::Word,
-        log_parser::ParserElement::BracketDelimited,
-        log_parser::ParserElement::QuoteDelimited,
-        log_parser::ParserElement::Word,
-        log_parser::ParserElement::Word,
-        log_parser::ParserElement::QuoteDelimited,
-        log_parser::ParserElement::QuoteDelimited,
-    ];
-
-    let parser = log_parser::LineParser::new(&format_combined);
+    let format = log_parser::LogField::log_format_combined();
+    let parser = log_parser::LineParser::new(&format, opt.fields);
     let delimiter = opt.field_delimiter.unwrap_or('\t') as u8;
 
     for line in std::io::stdin().lock().lines() {
