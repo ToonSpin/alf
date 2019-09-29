@@ -78,10 +78,12 @@ fn main() -> std::io::Result<()> {
     for line in std::io::stdin().lock().lines() {
         let line = line.unwrap();
         if let Ok(v) = parser.parse_line(&line) {
-            if use_color {
-                write_output_color(&mut stdout, v, delimiter)?;
-            } else {
-                write_output(&mut stdout, v, delimiter)?;
+            if v.len() > 0 {
+                if use_color {
+                    write_output_color(&mut stdout, v, delimiter)?;
+                } else {
+                    write_output(&mut stdout, v, delimiter)?;
+                }
             }
         }
     }
