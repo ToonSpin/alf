@@ -84,15 +84,26 @@ fn main() -> std::io::Result<()> {
         _ => unreachable!(),
     };
 
+    let mut line_number = 0;
     for line in std::io::stdin().lock().lines() {
+        line_number += 1;
         let line = line.unwrap();
-        if let Ok(v) = parser.parse_line(&line) {
-            if v.len() > 0 {
-                if use_color {
-                    write_line_color(&mut stdout, v, delimiter)?;
-                } else {
-                    write_line(&mut stdout, v, delimiter)?;
+        match parser.parse_line(&line) {
+            Ok(v) => {
+                if v.len() > 0 {
+                    if use_color {
+                        write_line_color(&mut stdout, v, delimiter)?;
+                    } else {
+                        write_line(&mut stdout, v, delimiter)?;
+                    }
                 }
+            }
+            Err(e) => {
+                eprintln!(
+                    "{} on line {}",
+                    log_parser::LineParser::get_error_string(e),
+                    line_number
+                );
             }
         }
     }

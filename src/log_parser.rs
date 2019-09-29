@@ -229,4 +229,14 @@ impl<'a, 'b> LineParser<'a> {
             None => Ok(result),
         }
     }
+
+    pub fn get_error_string(e: ParserError) -> String {
+        match e {
+            UnexpectedEndOfLine => String::from("Unexpected end of line"),
+            UnexpectedCharacter(expected, got, _position) => String::from(format!(
+                "Unexpected character: expected '{}', got '{}'",
+                expected, got
+            )),
+        }
+    }
 }
