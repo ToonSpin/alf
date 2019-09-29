@@ -31,7 +31,8 @@ although I have not been able to verify this.
 ## Fields
 
 Depending on the log format, the following fields may be available. In the
-default format, called `combined`, all of these are available except `vhost`.
+default format, called `combined`, all of these are available except `vhost`,
+`input`, and `output`.
 
 * `vhost`
 * `ip`
@@ -45,3 +46,5 @@ default format, called `combined`, all of these are available except `vhost`.
 * `responsesize`
 * `referer`
 * `useragent`
+* `input`
+* `output`

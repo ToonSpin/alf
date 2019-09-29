@@ -161,6 +161,21 @@ impl LogField {
         ]);
         log_format
     }
+
+    pub fn log_format_combinedio() -> Vec<LogField> {
+        let mut log_format = Self::log_format_combined();
+        log_format.append(&mut vec![
+            LogField {
+                name: String::from("input"),
+                element_type: ParserElement::Word,
+            },
+            LogField {
+                name: String::from("output"),
+                element_type: ParserElement::Word,
+            },
+        ]);
+        log_format
+    }
 }
 
 pub struct LineParser<'a> {
