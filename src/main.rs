@@ -9,14 +9,14 @@ use structopt::StructOpt;
 
 /// This program reads Apache log data from standard input, processes it, and
 /// writes it to standard output.
-#[derive(StructOpt, Debug)]
+#[derive(StructOpt)]
 struct Opt {
     /// The character to insert between each output field. [default: tab]
-    #[structopt(value_name="CHAR", short="d", long="delimiter")]
+    #[structopt(value_name="char", short="d", long="delimiter")]
     field_delimiter: Option<char>,
 
     /// A whitespace delimited list of fields to extract from each line.
-    #[structopt(value_name="FIELD", short, long)]
+    #[structopt(value_name="field", short, long)]
     fields: Option<Vec<String>>,
 
     /// Whether or not to color fields using ANSI color codes.
