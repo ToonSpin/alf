@@ -40,15 +40,15 @@ impl ParserElement {
             return Err(UnexpectedCharacter('"', input.as_bytes()[0] as char, 0));
         }
 
-        match memchr(b'"', &input[1..].as_bytes()) {
-            Some(next_pos) => {
-                let next_pos = next_pos + 1;
+        let mut cur_pos = 1;
+        while let Some(next_pos) = memchr(b'"', &input[cur_pos..].as_bytes()) {
+            let next_pos = next_pos + cur_pos;
+            if input.as_bytes()[next_pos - 1] != b'\\' {
                 return Ok((&input[1..next_pos], next_pos + 1));
-            },
-            None => {
-                return Err(UnexpectedEndOfLine);
             }
+            cur_pos = next_pos + 1;
         }
+        return Err(UnexpectedEndOfLine);
     }
 
     fn parse<'a>(&self, input: &'a str) -> Result<(&'a str, usize), ParserError> {
