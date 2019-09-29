@@ -94,7 +94,7 @@ pub struct LogField {
 }
 
 impl LogField {
-    pub fn log_format_combined() -> Vec<LogField> {
+    pub fn log_format_common() -> Vec<LogField> {
         vec![
             LogField {
                 name: String::from("ip"),
@@ -132,6 +132,23 @@ impl LogField {
                 name: String::from("responsesize"),
                 element_type: ParserElement::Word,
             },
+        ]
+    }
+
+    pub fn log_format_common_with_vhost() -> Vec<LogField> {
+        let mut log_format = vec![
+            LogField {
+                name: String::from("vhost"),
+                element_type: ParserElement::Word,
+            },
+        ];
+        log_format.append(&mut Self::log_format_common());
+        log_format
+    }
+
+    pub fn log_format_combined() -> Vec<LogField> {
+        let mut log_format = Self::log_format_common();
+        log_format.append(&mut vec![
             LogField {
                 name: String::from("referer"),
                 element_type: ParserElement::QuoteDelimited(true, true),
@@ -140,7 +157,8 @@ impl LogField {
                 name: String::from("useragent"),
                 element_type: ParserElement::QuoteDelimited(true, true),
             },
-        ]
+        ]);
+        log_format
     }
 }
 

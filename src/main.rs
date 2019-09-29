@@ -19,6 +19,10 @@ struct Opt {
     #[structopt(value_name="field", short, long)]
     fields: Option<Vec<String>>,
 
+    /// The log format this program should expect.
+    #[structopt(short="F", long, possible_values=&["combined","common","common_with_vhost",], default_value="combined")]
+    format: String,
+
     /// Whether or not to color fields using ANSI color codes.
     #[structopt(short, long, possible_values=&["always","auto","never"], default_value="auto")]
     color: String,
@@ -64,13 +68,19 @@ fn main() -> std::io::Result<()> {
 
     let opt = Opt::from_args();
 
-    let format = log_parser::LogField::log_format_combined();
+    let format = match &opt.format[..] {
+        "combined" => log_parser::LogField::log_format_combined(),
+        "common" => log_parser::LogField::log_format_common(),
+        "common_with_vhost" => log_parser::LogField::log_format_common_with_vhost(),
+        _ => unreachable!(),
+    };
+
     let parser = log_parser::LineParser::new(&format, opt.fields);
     let delimiter = opt.field_delimiter.unwrap_or('\t');
 
     let use_color = match &opt.color[..] {
-        "auto" => atty::is(atty::Stream::Stdout),
         "always" => true,
+        "auto" => atty::is(atty::Stream::Stdout),
         "never" => false,
         _ => unreachable!(),
     };
