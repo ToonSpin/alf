@@ -3,7 +3,7 @@ use memchr::memchr;
 pub enum ParserElement {
     Word,
     BracketDelimited,
-    QuoteDelimited,
+    QuoteDelimited(bool, bool),
 }
 use ParserElement::*;
 
@@ -35,18 +35,40 @@ impl ParserElement {
         }
     }
 
-    fn parse_quote_delimited<'a>(&self, input: &'a str) -> Result<(&'a str, usize), ParserError> {
-        if input.as_bytes()[0] != b'"' {
-            return Err(UnexpectedCharacter('"', input.as_bytes()[0] as char, 0));
-        }
-
-        let mut cur_pos = 1;
+    fn get_end_quote_pos(&self, input: &str) -> Result<usize, ParserError> {
+        let mut cur_pos = 0;
         while let Some(next_pos) = memchr(b'"', &input[cur_pos..].as_bytes()) {
-            let next_pos = next_pos + cur_pos;
+            let next_pos = cur_pos + next_pos;
             if input.as_bytes()[next_pos - 1] != b'\\' {
-                return Ok((&input[1..next_pos], next_pos + 1));
+                return Ok(next_pos);
             }
             cur_pos = next_pos + 1;
+        }
+        return Err(UnexpectedEndOfLine);
+    }
+
+    fn parse_quote_delimited<'a>(&self, input: &'a str, left: bool, right: bool) -> Result<(&'a str, usize), ParserError> {
+        let mut cur_pos = 0;
+        if left {
+            if input.as_bytes()[0] != b'"' {
+                return Err(UnexpectedCharacter('"', input.as_bytes()[0] as char, 0));
+            }
+            cur_pos += 1;
+        }
+
+        let end_pos = self.get_end_quote_pos(&input[cur_pos..])? + cur_pos;
+
+        if right {
+            return Ok((&input[cur_pos..end_pos], end_pos + 1));
+        } else {
+            if let Some(next_space) = memchr(b' ', &input[cur_pos..].as_bytes()) {
+                let next_space = next_space + cur_pos;
+                if next_space < end_pos {
+                    return Ok((&input[cur_pos..next_space], next_space));
+                } else {
+                    return Err(UnexpectedCharacter(' ', '\"', end_pos));
+                }
+            }
         }
         return Err(UnexpectedEndOfLine);
     }
@@ -55,7 +77,7 @@ impl ParserElement {
         match self {
             Word => self.parse_word(input),
             BracketDelimited => self.parse_bracket_delimited(input),
-            QuoteDelimited => self.parse_quote_delimited(input),
+            QuoteDelimited(left, right) => self.parse_quote_delimited(input, *left, *right),
         }
     }
 }
@@ -91,8 +113,16 @@ impl LogField {
                 element_type: ParserElement::BracketDelimited,
             },
             LogField {
+                name: String::from("method"),
+                element_type: ParserElement::QuoteDelimited(true, false),
+            },
+            LogField {
                 name: String::from("request"),
-                element_type: ParserElement::QuoteDelimited,
+                element_type: ParserElement::QuoteDelimited(false, false),
+            },
+            LogField {
+                name: String::from("http"),
+                element_type: ParserElement::QuoteDelimited(false, true),
             },
             LogField {
                 name: String::from("status"),
@@ -104,11 +134,11 @@ impl LogField {
             },
             LogField {
                 name: String::from("referer"),
-                element_type: ParserElement::QuoteDelimited,
+                element_type: ParserElement::QuoteDelimited(true, true),
             },
             LogField {
                 name: String::from("useragent"),
-                element_type: ParserElement::QuoteDelimited,
+                element_type: ParserElement::QuoteDelimited(true, true),
             },
         ]
     }
