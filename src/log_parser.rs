@@ -37,7 +37,7 @@ impl ParserElement {
         let mut cur_pos = 0;
         while let Some(next_pos) = memchr(b'"', &input[cur_pos..].as_bytes()) {
             let next_pos = cur_pos + next_pos;
-            if input.as_bytes()[next_pos - 1] != b'\\' {
+            if next_pos == 0 || input.as_bytes()[next_pos - 1] != b'\\' {
                 return Ok(next_pos);
             }
             cur_pos = next_pos + 1;

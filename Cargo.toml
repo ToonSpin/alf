@@ -1,6 +1,6 @@
 [package]
 name = "alf"
-version = "1.0.2"
+version = "1.0.3"
 authors = ["Toon Spin <toon.spin@gmail.com>"]
 edition = "2018"
 
