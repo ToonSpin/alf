@@ -13,11 +13,9 @@ impl ParserElement {
         match memchr(b' ', &input[..].as_bytes()) {
             Some(next_pos) => {
                 let next_pos = next_pos;
-                return Ok((&input[..next_pos], next_pos));
+                Ok((&input[..next_pos], next_pos))
             }
-            None => {
-                return Ok((&input[..], input.len()));
-            }
+            None => Ok((&input[..], input.len())),
         }
     }
 
@@ -27,10 +25,8 @@ impl ParserElement {
         }
 
         match memchr(b']', &input[..].as_bytes()) {
-            Some(next_pos) => return Ok((&input[1..next_pos], next_pos + 1)),
-            None => {
-                return Err(UnexpectedEndOfLine);
-            }
+            Some(next_pos) => Ok((&input[1..next_pos], next_pos + 1)),
+            None => Err(UnexpectedEndOfLine),
         }
     }
 
@@ -43,7 +39,7 @@ impl ParserElement {
             }
             cur_pos = next_pos + 1;
         }
-        return Err(UnexpectedEndOfLine);
+        Err(UnexpectedEndOfLine)
     }
 
     fn parse_quote_delimited<'a>(&self, input: &'a str) -> Result<(&'a str, usize), ParserError> {
@@ -51,7 +47,7 @@ impl ParserElement {
             return Err(UnexpectedCharacter('"', input.as_bytes()[0] as char, 0));
         }
         let end_pos = self.get_end_quote_pos(&input[1..])? + 1;
-        return Ok((&input[1..end_pos], end_pos + 1));
+        Ok((&input[1..end_pos], end_pos + 1))
     }
 
     fn parse<'a>(&self, input: &'a str) -> Result<(&'a str, usize), ParserError> {
@@ -76,7 +72,7 @@ pub struct LogField {
 }
 
 impl LogField {
-    pub fn get_names(format: &Vec<LogField>) -> Vec<String> {
+    pub fn get_names(format: &[LogField]) -> Vec<String> {
         format.iter().map(|f| f.name.clone()).collect()
     }
 
@@ -166,13 +162,13 @@ impl LogField {
 }
 
 pub struct LineParser<'a> {
-    log_format: &'a Vec<LogField>,
+    log_format: &'a [LogField],
     field_ids: Option<Vec<usize>>,
     max_field_id: usize,
 }
 
 impl<'a, 'b> LineParser<'a> {
-    pub fn new(log_format: &'a Vec<LogField>, fields: Option<Vec<String>>) -> LineParser {
+    pub fn new(log_format: &[LogField], fields: Option<Vec<String>>) -> LineParser {
         let mut field_ids = None;
         let mut max_field_id = log_format.len() - 1;
         if let Some(v) = fields {
@@ -206,10 +202,10 @@ impl<'a, 'b> LineParser<'a> {
             if let Some(p) = memchr(b' ', field_match[first_space + 1..].as_bytes()) {
                 second_space = first_space + 1 + p;
             } else {
-                return Err(UnexpectedCharacter(' ', '\"' as char, pos + field_match.len()));
+                return Err(UnexpectedCharacter(' ', '\"', pos + field_match.len()));
             }
         } else {
-            return Err(UnexpectedCharacter(' ', '\"' as char, pos + field_match.len()));
+            return Err(UnexpectedCharacter(' ', '\"', pos + field_match.len()));
         }
 
         Ok((first_space, second_space))
@@ -234,7 +230,7 @@ impl<'a, 'b> LineParser<'a> {
 
             let (field_match, consumed) = field.element_type.parse(&input[pos..])?;
             if field.name == "request" {
-                if let Some(_) = self.field_ids {
+                if self.field_ids.is_some() {
                     result.push(field_match);
                 }
                 if field_match == "-" {
@@ -277,10 +273,10 @@ impl<'a, 'b> LineParser<'a> {
     pub fn get_error_string(e: ParserError) -> String {
         match e {
             UnexpectedEndOfLine => String::from("Unexpected end of line"),
-            UnexpectedCharacter(expected, got, _position) => String::from(format!(
+            UnexpectedCharacter(expected, got, _position) => format!(
                 "Unexpected character: expected '{}', got '{}'",
                 expected, got
-            )),
+            ),
         }
     }
 }

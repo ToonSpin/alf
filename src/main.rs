@@ -1,3 +1,4 @@
+use crate::log_parser::LineParser;
 use std::io::{BufRead, BufWriter, Write};
 use structopt::StructOpt;
 
@@ -16,28 +17,34 @@ struct Opt {
     fields: Option<Vec<String>>,
 
     /// The log format this program should expect
-    #[structopt(short="F", long, possible_values=&["combined","combinedio","common","vhost_common",], default_value="combined")]
+    #[structopt(short = "F", long, possible_values = &["combined","combinedio","common","vhost_common",], default_value = "combined")]
     format: String,
 
     /// Whether or not to color fields using ANSI color codes
-    #[structopt(short, long, possible_values=&["always","auto","never"], default_value="auto")]
+    #[structopt(short, long, possible_values = &["always","auto","never"], default_value = "auto")]
     color: String,
 
     /// Lists the available fields instead of parsing input
-    #[structopt(short="l", long="list-fields")]
+    #[structopt(short = "l", long = "list-fields")]
     list_fields: bool,
 }
 
+// allowing the clippy::unused_io_amount lint, because using write_all rather
+// than write leads to a performance hit.
+#[allow(clippy::unused_io_amount)]
 fn write_line<T: Write>(writer: &mut T, result: Vec<&str>, sep: char) -> std::io::Result<()> {
     writer.write(result[0].as_bytes())?;
-    for i in 1..result.len() {
+    for field in result.iter().skip(1) {
         writer.write(&[sep as u8])?;
-        writer.write(result[i].as_bytes())?;
+        writer.write(field.as_bytes())?;
     }
     writer.write(&[b'\n'])?;
     Ok(())
 }
 
+// allowing the clippy::unused_io_amount lint, because using write_all rather
+// than write leads to a performance hit.
+#[allow(clippy::unused_io_amount)]
 fn write_line_color<T: Write>(writer: &mut T, result: Vec<&str>, sep: char) -> std::io::Result<()> {
     let colors = vec![
         "\u{001b}[31m", // red
@@ -66,17 +73,15 @@ fn write_line_color<T: Write>(writer: &mut T, result: Vec<&str>, sep: char) -> s
 }
 
 #[inline]
-fn parse_and_print(parser: &log_parser::LineParser, delimiter: char, use_color: bool) -> std::io::Result<()> {
+fn parse_and_print(parser: &LineParser, delimiter: char, use_color: bool) -> std::io::Result<()> {
     let stdout = std::io::stdout();
     let mut stdout = BufWriter::new(stdout.lock());
 
-    let mut line_number = 0;
-    for line in std::io::stdin().lock().lines() {
-        line_number += 1;
+    for (line_number, line) in std::io::stdin().lock().lines().enumerate() {
         let line = line.unwrap();
         match parser.parse_line(&line) {
             Ok(v) => {
-                if v.len() > 0 {
+                if !v.is_empty() {
                     if use_color {
                         write_line_color(&mut stdout, v, delimiter)?;
                     } else {
@@ -87,7 +92,7 @@ fn parse_and_print(parser: &log_parser::LineParser, delimiter: char, use_color: 
             Err(e) => {
                 eprintln!(
                     "{} on line {}",
-                    log_parser::LineParser::get_error_string(e),
+                    LineParser::get_error_string(e),
                     line_number
                 );
             }
