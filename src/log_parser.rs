@@ -3,7 +3,8 @@ use memchr::memchr;
 pub enum ParserElement {
     Word,
     BracketDelimited,
-    QuoteDelimited(bool, bool),
+    QuoteDelimited,
+    Computed,
 }
 use ParserElement::*;
 
@@ -45,42 +46,20 @@ impl ParserElement {
         return Err(UnexpectedEndOfLine);
     }
 
-    fn parse_quote_delimited<'a>(
-        &self,
-        input: &'a str,
-        left: bool,
-        right: bool,
-    ) -> Result<(&'a str, usize), ParserError> {
-        let mut cur_pos = 0;
-        if left {
-            if input.as_bytes()[0] != b'"' {
-                return Err(UnexpectedCharacter('"', input.as_bytes()[0] as char, 0));
-            }
-            cur_pos += 1;
+    fn parse_quote_delimited<'a>(&self, input: &'a str) -> Result<(&'a str, usize), ParserError> {
+        if input.as_bytes()[0] != b'"' {
+            return Err(UnexpectedCharacter('"', input.as_bytes()[0] as char, 0));
         }
-
-        let end_pos = self.get_end_quote_pos(&input[cur_pos..])? + cur_pos;
-
-        if right {
-            return Ok((&input[cur_pos..end_pos], end_pos + 1));
-        } else {
-            if let Some(next_space) = memchr(b' ', &input[cur_pos..].as_bytes()) {
-                let next_space = next_space + cur_pos;
-                if next_space < end_pos {
-                    return Ok((&input[cur_pos..next_space], next_space));
-                } else {
-                    return Err(UnexpectedCharacter(' ', '\"', end_pos));
-                }
-            }
-        }
-        return Err(UnexpectedEndOfLine);
+        let end_pos = self.get_end_quote_pos(&input[1..])? + 1;
+        return Ok((&input[1..end_pos], end_pos + 1));
     }
 
     fn parse<'a>(&self, input: &'a str) -> Result<(&'a str, usize), ParserError> {
         match self {
             Word => self.parse_word(input),
             BracketDelimited => self.parse_bracket_delimited(input),
-            QuoteDelimited(left, right) => self.parse_quote_delimited(input, *left, *right),
+            QuoteDelimited => self.parse_quote_delimited(input),
+            Computed => unreachable!(),
         }
     }
 }
@@ -116,16 +95,20 @@ impl LogField {
                 element_type: ParserElement::BracketDelimited,
             },
             LogField {
-                name: String::from("method"),
-                element_type: ParserElement::QuoteDelimited(true, false),
+                name: String::from("request"),
+                element_type: ParserElement::QuoteDelimited,
             },
             LogField {
-                name: String::from("request"),
-                element_type: ParserElement::QuoteDelimited(false, false),
+                name: String::from("method"),
+                element_type: ParserElement::Computed,
+            },
+            LogField {
+                name: String::from("uri"),
+                element_type: ParserElement::Computed,
             },
             LogField {
                 name: String::from("http"),
-                element_type: ParserElement::QuoteDelimited(false, true),
+                element_type: ParserElement::Computed,
             },
             LogField {
                 name: String::from("status"),
@@ -152,11 +135,11 @@ impl LogField {
         log_format.append(&mut vec![
             LogField {
                 name: String::from("referer"),
-                element_type: ParserElement::QuoteDelimited(true, true),
+                element_type: ParserElement::QuoteDelimited,
             },
             LogField {
                 name: String::from("useragent"),
-                element_type: ParserElement::QuoteDelimited(true, true),
+                element_type: ParserElement::QuoteDelimited,
             },
         ]);
         log_format
@@ -211,6 +194,23 @@ impl<'a, 'b> LineParser<'a> {
         }
     }
 
+    fn get_computed_fields(field_match: &str, pos: usize) -> Result<(usize, usize), ParserError> {
+        let first_space;
+        let second_space;
+        if let Some(p) = memchr(b' ', field_match.as_bytes()) {
+            first_space = p;
+            if let Some(p) = memchr(b' ', field_match[first_space + 1..].as_bytes()) {
+                second_space = first_space + 1 + p;
+            } else {
+                return Err(UnexpectedCharacter(' ', '\"' as char, pos + field_match.len()));
+            }
+        } else {
+            return Err(UnexpectedCharacter(' ', '\"' as char, pos + field_match.len()));
+        }
+
+        Ok((first_space, second_space))
+    }
+
     fn get_parse_result(&self, input: &'b str) -> Result<Vec<&'b str>, ParserError> {
         let mut pos: usize = 0;
         let mut result = Vec::with_capacity(self.max_field_id + 1);
@@ -224,9 +224,30 @@ impl<'a, 'b> LineParser<'a> {
                 return Err(UnexpectedEndOfLine);
             }
 
+            if let ParserElement::Computed = field.element_type {
+                continue;
+            }
+
             let (field_match, consumed) = field.element_type.parse(&input[pos..])?;
-            result.push(field_match);
+            if field.name == "request" {
+                if let Some(_) = self.field_ids {
+                    result.push(field_match);
+                }
+                if field_match == "-" {
+                    result.push(&field_match[0..1]);
+                    result.push(&field_match[0..1]);
+                    result.push(&field_match[0..1]);
+                } else {
+                    let (first_space, second_space) = Self::get_computed_fields(field_match, pos)?;
+                    result.push(&field_match[..first_space]);
+                    result.push(&field_match[first_space + 1..second_space]);
+                    result.push(&field_match[second_space + 1..]);
+                }
+            } else {
+                result.push(field_match);
+            }
             pos += consumed;
+
             if input.as_bytes().len() > pos && input.as_bytes()[pos] != b' ' {
                 return Err(UnexpectedCharacter(' ', input.as_bytes()[pos] as char, pos));
             }

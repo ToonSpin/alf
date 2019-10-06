@@ -39,8 +39,9 @@ default format, called `combined`, all of these are available except `vhost`,
 * `rfc1413`
 * `username`
 * `time`
-* `method`
 * `request`
+* `method`
+* `uri`
 * `http`
 * `status`
 * `responsesize`
