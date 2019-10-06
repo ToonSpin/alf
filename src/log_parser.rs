@@ -76,6 +76,10 @@ pub struct LogField {
 }
 
 impl LogField {
+    pub fn get_names(format: &Vec<LogField>) -> Vec<String> {
+        format.iter().map(|f| f.name.clone()).collect()
+    }
+
     pub fn log_format_common() -> Vec<LogField> {
         vec![
             LogField {

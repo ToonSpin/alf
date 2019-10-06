@@ -7,21 +7,25 @@ mod log_parser;
 /// input, processes it, and writes it to standard output.
 #[derive(StructOpt)]
 struct Opt {
-    /// The character to insert between each output field. [default: tab]
+    /// The character to insert between each output field [default: tab]
     #[structopt(value_name = "char", short = "d", long = "delimiter")]
     field_delimiter: Option<char>,
 
-    /// A whitespace delimited list of fields to extract from each line.
+    /// A whitespace delimited list of fields to extract from each line
     #[structopt(value_name = "field", short, long)]
     fields: Option<Vec<String>>,
 
-    /// The log format this program should expect.
+    /// The log format this program should expect
     #[structopt(short="F", long, possible_values=&["combined","combinedio","common","vhost_common",], default_value="combined")]
     format: String,
 
-    /// Whether or not to color fields using ANSI color codes.
+    /// Whether or not to color fields using ANSI color codes
     #[structopt(short, long, possible_values=&["always","auto","never"], default_value="auto")]
     color: String,
+
+    /// Lists the available fields instead of parsing input
+    #[structopt(short="l", long="list-fields")]
+    list_fields: bool,
 }
 
 fn write_line<T: Write>(writer: &mut T, result: Vec<&str>, sep: char) -> std::io::Result<()> {
@@ -61,29 +65,10 @@ fn write_line_color<T: Write>(writer: &mut T, result: Vec<&str>, sep: char) -> s
     Ok(())
 }
 
-fn main() -> std::io::Result<()> {
+#[inline]
+fn parse_and_print(parser: &log_parser::LineParser, delimiter: char, use_color: bool) -> std::io::Result<()> {
     let stdout = std::io::stdout();
     let mut stdout = BufWriter::new(stdout.lock());
-
-    let opt = Opt::from_args();
-
-    let format = match &opt.format[..] {
-        "combined" => log_parser::LogField::log_format_combined(),
-        "combinedio" => log_parser::LogField::log_format_combinedio(),
-        "common" => log_parser::LogField::log_format_common(),
-        "vhost_common" => log_parser::LogField::log_format_vhost_common(),
-        _ => unreachable!(),
-    };
-
-    let parser = log_parser::LineParser::new(&format, opt.fields);
-    let delimiter = opt.field_delimiter.unwrap_or('\t');
-
-    let use_color = match &opt.color[..] {
-        "always" => true,
-        "auto" => atty::is(atty::Stream::Stdout),
-        "never" => false,
-        _ => unreachable!(),
-    };
 
     let mut line_number = 0;
     for line in std::io::stdin().lock().lines() {
@@ -108,6 +93,36 @@ fn main() -> std::io::Result<()> {
             }
         }
     }
-
     Ok(())
+}
+
+fn main() -> std::io::Result<()> {
+    let opt = Opt::from_args();
+
+    let format = match &opt.format[..] {
+        "combined" => log_parser::LogField::log_format_combined(),
+        "combinedio" => log_parser::LogField::log_format_combinedio(),
+        "common" => log_parser::LogField::log_format_common(),
+        "vhost_common" => log_parser::LogField::log_format_vhost_common(),
+        _ => unreachable!(),
+    };
+
+    if opt.list_fields {
+        for name in log_parser::LogField::get_names(&format) {
+            println!("{}", name);
+        }
+        Ok(())
+    } else {
+        let parser = log_parser::LineParser::new(&format, opt.fields);
+        let delimiter = opt.field_delimiter.unwrap_or('\t');
+
+        let use_color = match &opt.color[..] {
+            "always" => true,
+            "auto" => atty::is(atty::Stream::Stdout),
+            "never" => false,
+            _ => unreachable!(),
+        };
+
+        parse_and_print(&parser, delimiter, use_color)
+    }
 }

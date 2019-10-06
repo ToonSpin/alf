@@ -30,22 +30,18 @@ although I have not been able to verify this.
 
 ## Fields
 
-Depending on the log format, the following fields may be available. In the
-default format, called `combined`, all of these are available except `vhost`,
-`input`, and `output`.
+Depending on the log format, different fields may be available. List them with
+Alf's `-l` flag, for example:
 
-* `vhost`
-* `ip`
-* `rfc1413`
-* `username`
-* `time`
-* `request`
-* `method`
-* `uri`
-* `http`
-* `status`
-* `responsesize`
-* `referer`
-* `useragent`
-* `input`
-* `output`
+```bash
+alf -l
+alf --list-fields --format common
+```
+
+The `request` field is a special case. It is a field that consists of three
+other fields, namely `method`, `uri`, and `http`. If you don't list any fields
+with the `-f`/`--fields` option, then `request` is not listed and instead the
+three "sub-fields" are listed.
+
+If you do use the `-f`/`--fields` option to list fields, then the `request`
+field as well of its subfields are available for use. 
